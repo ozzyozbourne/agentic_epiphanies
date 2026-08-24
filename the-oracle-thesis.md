@@ -226,6 +226,7 @@ format. Expanding coverage reintroduces the complexity you claimed to escape.
 | Compiler heuristics | RL policy (MLGO) | the compiler itself — exact, see §8 | ✅ but small |
 | Spec → RTL | LLM sampling | *doesn't exist* | ❌ 23% |
 | Robot policy | RL in sim | **simulator — approximate, see §7** | ⚠️ depends |
+| NeuralOS | diffusion + RNN | the real OS — exact, then *discarded*, see §9 | ❌ inverted |
 
 The generator's sophistication varies wildly down that column. **What predicts
 success is the third column.**
@@ -237,10 +238,10 @@ theorem-proving is much harder (no cheap oracle without formalizing into Lean
 first, and formalizing is the expensive step). Tractability tracked the oracle,
 not the difficulty of the math.
 
-Every oracle above except the last is **faithful** — it tells you the truth or
-it tells you nothing. The simulator row is the exception, and it is different
-enough to need its own section (§7): an oracle that is confidently *wrong* in
-ways invisible from inside it.
+Every oracle above except the last two is **faithful** — it tells you the truth
+or it tells you nothing. The simulator row is confidently *wrong* in ways
+invisible from inside it (§7). The NeuralOS row is stranger still: an exact
+oracle existed and was replaced with an approximate one (§9).
 
 ---
 
@@ -467,7 +468,7 @@ reward design.
 Note what that actually is. The agent is not the policy. **The agent authors the
 oracle.** It is the most direct instance of this document's thesis found so far.
 
-It also maps cleanly onto the search/construction split in §9:
+It also maps cleanly onto the search/construction split in §10:
 
 - **RL in sim** = search. The objective lives in the machine (the reward).
 - **Agent writing rewards, scenes, curricula** = construction. The objective lives
@@ -500,7 +501,7 @@ line is your oracle on?*
    omarchy/dsh pattern from §6 with a physics engine as the acceptance layer, and
    it is substantially less explored.
 
-### Against the §13 predicate
+### Against the §14 predicate
 
 - deterministic-but-incomplete method — ✅ (physics engines; contact unsolved)
 - enumerable legal moves — ~partial
@@ -759,7 +760,159 @@ kernels the compiler was never going to autovectorize** — all of which sit
 
 ---
 
-## 9. Two different shapes, not one
+## 9. Neural computers: the inverted oracle
+
+*Added 2026-08-24, prompted by "Neural Computers" ([arXiv
+2604.06425](https://arxiv.org/abs/2604.06425)) and [NeuralOS
+(2507.08800)](https://arxiv.org/abs/2507.08800), and the claim that LLMs might
+bitter-lesson the von Neumann architecture itself.*
+
+§7 is an oracle that is cheap but unfaithful. §8 is an oracle that is cheap and
+exact. This is the third configuration and the strangest: **an exact oracle
+already exists, and you build an approximate one anyway.**
+
+### What the papers actually claim
+
+Both hedge far harder than the discourse around them.
+
+**Neural Computers** proposes unifying "computation, memory, and I/O of
+traditional computers in a learned runtime state," toward a "Completely Neural
+Computer." It is instantiated as video models generating screen frames from
+instructions, pixels, and actions, learned **solely from I/O traces, without
+instrumented program state**. Result: it acquires "elementary interface
+primitives, especially I/O alignment and short-horizon control." Explicitly
+unresolved: **"routine reuse, controlled updates, and symbolic stability."** The
+paper calls itself "an initial step."
+
+**NeuralOS** is an RNN tracking state plus a diffusion renderer, trained on Ubuntu
+XFCE recordings. The authors call it an **"exploratory prototype."**
+
+Neither claims to replace conventional computers.
+
+### The numbers are the argument
+
+| | NeuralOS | the Ubuntu XFCE it imitates |
+|---|---|---|
+| Resolution | 512×384 | native |
+| Frame rate | 18 fps on **one H100** | 60+ fps on integrated graphics |
+| Power | datacenter GPU | a few watts |
+| Training | 17,000 H200-hrs + 6,000 H100-hrs (~4 months) | already exists, free |
+| Data | 12 TB compressed latents | — |
+| Typing | **no** — "struggles to accurately represent fine-grained keyboard inputs" | yes |
+| Network | cannot interact with external resources | yes |
+
+Their own limitations appendix concedes "high computational requirements
+unsuitable for practical deployment." Roughly six figures of compute to produce a
+lower-resolution, non-typing, offline approximation of software that runs free on
+a laptop.
+
+### What it is actually demonstrating
+
+The charitable and correct read: this is a **world-model** result in the
+Ha & Schmidhuber lineage, not an OS result. The real claim is *a generative model
+can learn interactive system dynamics from raw I/O alone, with no access to
+program state.* Two findings genuinely worth attention:
+
+- **The Doom result** — simulating an application never installed, taught from
+  synthesized data.
+- **Persistence past context** — recalling whether a folder existed after 256
+  frames on a 64-frame training context.
+
+Those are interesting about world models. They are not evidence about computers.
+
+### Why the failure mode is categorical, not a scaling problem
+
+Text rendering fails **not for want of data**. Diffusion over pixels has no
+mechanism for exact discrete state, and a computer's defining property is holding
+a bit exactly, forever, for free. A continuous lossy representation cannot do
+that.
+
+The Neural Computers paper names the gap itself: **symbolic stability**,
+unresolved. Broken typing is the visible symptom of it, not a separate bug.
+
+### The bitter lesson eats itself here
+
+The bitter lesson says general methods that **leverage computation** beat
+hand-crafted knowledge. Von Neumann machines *are how you leverage computation*.
+
+You cannot bitter-lesson your own substrate. Every bitter-lesson victory was
+bought with GPU-hours on deterministic silicon — this one included. NeuralOS burned
+23,000 GPU-hours **on von Neumann machines** to produce a worse computer. The more
+compute-hungry the method, the more it needs the substrate to stay exact and
+efficient.
+
+### The field already ran this experiment and it lost
+
+**Neural Turing Machines** (2014) and **Differentiable Neural Computers** (2016)
+were precisely the "make the network *be* the computer" bet — differentiable
+addressable memory, read/write heads, learned von Neumann. They worked on toy
+tasks (copy, sort, graph traversal) and did not scale.
+
+What won instead was **tool use**: give the model a Python interpreter, a shell, a
+database. The field's empirical answer was *don't make the network be the
+computer — let the network drive the computer.*
+
+And it won for this document's reason. A Python interpreter is an **exact oracle**;
+a neural approximation of arithmetic degrades with magnitude. With a perfect
+deterministic substrate available, approximating it is strictly worse on every
+axis. NTM/DNC was the neural-computer bet, placed in 2014–2016, and it lost to the
+oracle bet.
+
+### Turing completeness proves nothing here
+
+Siegelmann & Sontag (1995): RNNs with **rational** weights are Turing complete (886
+processors for a universal partial-recursive function); with **real** weights they
+are super-Turing, deciding non-recursively-enumerable languages.
+
+The catch is load-bearing: it requires **infinite precision and unbounded time**.
+[Weiss, Goldberg & Yahav (ACL 2018)](https://arxiv.org/abs/1805.04908) redid the
+analysis under finite precision and linear time — actual hardware — and the result
+collapses into a hierarchy where LSTM and ReLU-Elman are strictly stronger than
+GRU and squashing-RNN, all far below Turing.
+
+Turing completeness is also *cheap*. Rule 110 has it. Magic: The Gathering has it.
+x86 `MOV` alone has it. It says nothing about being an efficient, reliable, or
+verifiable substrate — which is the whole question.
+
+### Where real post-von-Neumann pressure comes from
+
+There is a serious architectural critique, and it is not this one. It is the
+**memory wall**: data movement dominates energy, not arithmetic. That is what
+drives TPUs, systolic arrays, HBM, dataflow architectures, and processing-in-memory.
+
+Note the direction. AI is reshaping computer architecture enormously — from the
+**demand** side, as a workload. Not by replacing computation with learned
+approximation.
+
+### The falsifiable bar
+
+Using the papers' own named gap:
+
+1. **Symbolic stability** — hold exact discrete state indefinitely, not 256 frames
+   of "did a folder exist"
+2. **Typing** — render arbitrary text correctly, the visible symptom of (1)
+3. **Beat the real thing on one axis** — cost, latency, energy, or capability
+
+Currently no, no, and no. (1) is a representation problem rather than a compute
+problem, which is why it should be settled before any of this reads as a trend.
+
+### The three configurations, stated together
+
+> §7 — cheap, **unfaithful** oracle: difficulty concentrates in fidelity.
+>
+> §8 — cheap, **exact** oracle: difficulty concentrates in what you measure and
+> on what distribution.
+>
+> §9 — an exact oracle **already existed** and was replaced with an approximate
+> one: difficulty is self-inflicted.
+
+The lesson holds in all three directions. You cannot get out of building or
+keeping the oracle — and where one already exists, discarding it is the most
+expensive mistake available.
+
+---
+
+## 10. Two different shapes, not one
 
 The final and most important refinement. "Agent navigates a nondeterministic
 space to find a thing" is true of both domains at an altitude where it stops
@@ -796,7 +949,7 @@ generated API catalog rather than a benchmark harness.
 
 ---
 
-## 10. On creativity
+## 11. On creativity
 
 The agent's edge isn't creativity-as-taste. It's three things:
 
@@ -837,7 +990,7 @@ libc++). Different mechanism, different prediction.
 
 ---
 
-## 11. No, the agent does not go straight to ones and zeros
+## 12. No, the agent does not go straight to ones and zeros
 
 The tempting final inference — if agents are this good, delete MLIR and LLVM IR
 and emit machine code — **inverts the whole thesis.**
@@ -871,7 +1024,7 @@ makes aggressive generation safe.
 
 ---
 
-## 12. The primitive
+## 13. The primitive
 
 Most attempts at agent reliability try to make **generation** deterministic —
 constrained decoding, restricted DSLs, templates, fill-in-the-blank scaffolds.
@@ -889,7 +1042,7 @@ the acceptance side. That's the marriage.
 
 ---
 
-## 13. Where to look for the next instance
+## 14. Where to look for the next instance
 
 Not a layer in the stack — a predicate. All three must hold:
 
@@ -911,7 +1064,7 @@ Meanwhile a linker script sits far down the stack and has all three.
 
 ---
 
-## 14. Open questions
+## 15. Open questions
 
 **The persistence disagreement.** The two codebases genuinely conflict, and
 neither has evidence:
@@ -951,6 +1104,10 @@ implementations can't answer for you.
 - Does LLM-proposed loop-invariant inference move the middle tier of §8's
   solvability table, or does it stall on the same programs symbolic methods
   already stalled on?
+- Is there any task where a learned approximation of an exactly-available system
+  wins on a real axis (§9)? Every current instance loses on all of cost, latency,
+  energy, and capability — but *learned indexes* and *learned cache replacement*
+  are arguable counterexamples worth examining.
 
 ---
 
