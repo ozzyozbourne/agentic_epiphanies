@@ -479,6 +479,63 @@ training statistics back as "reward reflection" and runs evolutionary iteration
 over candidate rewards. It manufactures a scalar where none existed. That move —
 synthesizing a gradient for a problem that had none — is the transferable idea.
 
+### How far that automation actually goes
+
+Decomposing "building a simulator" shows a sharp boundary rather than a gradient:
+
+| Layer | Automated? | By what |
+|---|---|---|
+| Assets, geometry, scenes | ✅ heavily | Gaussian-splatting real-to-sim — [RoboGSim](https://robogsim.github.io/) (Gaussian Reconstructor → Digital Twins Builder → Scene Composer), DREMA, RE3SIM, ManiSplat from monocular video |
+| Task / scene composition | ✅ | RoboGen, Gen2Sim, GenSim |
+| Reward functions | ✅ **beats humans** | Eureka — 83% of 29 IsaacGym tasks |
+| Curricula | ✅ | Eurekaverse, POET, ADR |
+| Fidelity calibration / SysID | ⚠️ partially | [Neural Fidelity Calibration](https://arxiv.org/html/2504.08604) — diffusion models calibrating simulator coefficients online |
+| The physics engine itself | ❌ | MuJoCo, PhysX, Bullet, Genesis — hand-written over decades |
+| Deciding what to model at all | ❌ | — |
+
+**Everything upstream of the engine is automating. The engine and its relationship
+to reality are not.** Which is §13 restated: the simulator's *content* is upstream
+of the check; the simulator's *substrate* is the check.
+
+One concession in the other direction: physics engines are *partly* automatable,
+because they have decent oracles of their own — conservation laws, analytic
+solutions, convergence tests, benchmark problems. An agent improving a contact
+solver against known-correct cases is §8's Path A. So the irreducible part is not
+writing engine code. It is narrower and more stubborn:
+
+> **Measuring where the model is wrong, against a physical system that drifts.**
+
+The sim-to-real literature is blunt about why that does not compress: *"many
+physical parameters of the same robot might vary significantly due to temperature,
+humidity, positioning or wear-and-tear in time."* The calibration target is
+**non-stationary**. It is not a puzzle solved once and shipped — it is an ongoing
+measurement relationship with a specific physical object that changes underneath
+you. Real2Sim2Real is explicitly a loop that *returns to hardware* and uses the
+mismatch. The loop closes at reality every time.
+
+Everything on the near side of that contact can be automated. The contact cannot.
+
+**Stated as a skill claim**, since this is what the "simulation as a career" pitch
+usually gets backwards:
+
+- *Tool skill* — "I know Isaac Sim / Omniverse / OpenUSD" — is content generation
+  inside a platform, which is precisely the top half of that table, and platforms
+  churn anyway.
+- *Judgment skill* — "I can quantify and close a sim-to-real gap in this domain" —
+  requires hardware access, physical measurement, and error-bar discipline.
+
+> **Skills requiring access to ground truth are durable. Skills that are content
+> generation inside a tool compress fast.**
+
+The same split governs oracle-building generally: **specifying** an oracle inside
+an existing checker is increasingly automated (Eureka's rewards, agent-written DST
+properties in §14, LLM-written SMT invariants in §8); **building** the checker is
+not, because nothing beneath it can validate it except reality. The skill does not
+disappear — it moves up a level, from writing the reward to deciding what fidelity
+the application demands, knowing where the model lies, and detecting when the
+optimizer is gaming it. That last one grows in importance as generators improve,
+per the inversion above.
+
 ### Where the sim oracle is weakest
 
 Domain randomization only fixes gaps **that can be modeled**: inexact masses,
