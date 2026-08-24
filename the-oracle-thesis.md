@@ -224,6 +224,7 @@ format. Expanding coverage reintroduces the complexity you claimed to escape.
 | Luminal / tinygrad | e-graph search | measured kernel latency | ✅ |
 | Math counterexamples | LLM-guided search | check one object against one predicate | ✅ |
 | Spec → RTL | LLM sampling | *doesn't exist* | ❌ 23% |
+| Robot policy | RL in sim | **simulator — approximate, see §7** | ⚠️ depends |
 
 The generator's sophistication varies wildly down that column. **What predicts
 success is the third column.**
@@ -234,6 +235,11 @@ why it's the most AI-tractable region of mathematics right now, while
 theorem-proving is much harder (no cheap oracle without formalizing into Lean
 first, and formalizing is the expensive step). Tractability tracked the oracle,
 not the difficulty of the math.
+
+Every oracle above except the last is **faithful** — it tells you the truth or
+it tells you nothing. The simulator row is the exception, and it is different
+enough to need its own section (§7): an oracle that is confidently *wrong* in
+ways invisible from inside it.
 
 ---
 
@@ -394,7 +400,135 @@ extending. These projects declined that trade and paid for safety elsewhere.
 
 ---
 
-## 7. Two different shapes, not one
+## 7. Simulation: the oracle you manufacture
+
+*Added 2026-08-24, prompted by a post asking whether simulation has stopped being
+a tool and become the product.*
+
+In every case above, **the oracle was lying around**. A standards body wrote the
+AV1 conformance vectors. EDA already had a placement cost function. Kernel
+latency is just "run it." A counterexample check is the definition of the
+conjecture.
+
+Robotics has no oracle lying around. Reality is the only ground truth, and it is
+slow, expensive, destructive, and unrepeatable.
+
+So somebody has to **build** the oracle — and building oracles is a business in a
+way that using one never was. That is the entire content of "simulation as
+product." Not that simulation got more useful; that the industry noticed the
+verifier is the scarce asset and started selling it.
+
+It explains the job titles. Domain randomization, system identification,
+sim-to-real, validation infrastructure — none of those are "operate the
+simulator." Every one of them is **managing the oracle's error.**
+
+### The new category: the approximate oracle
+
+Every oracle in the §5 table is *faithful*: it tells you the truth or it tells
+you nothing. A simulator is the first entry that confidently tells you things
+that are **wrong**, in ways invisible from inside it.
+
+That inverts the criterion used everywhere else in this document. We kept saying
+*cheap and fast*. For simulation, cheap and fast is the **free** part — GPUs
+solved it. **Fidelity is the hard part**: expensive, ongoing, domain-specific,
+and never finished.
+
+That asymmetry is precisely what makes it a product rather than a feature.
+
+### The inversion that matters most
+
+> **A stronger optimizer makes a flawed oracle worse, not better.**
+
+Documented repeatedly in the reward-hacking literature: policies that exploit a
+physics glitch to reach unrealistic jump heights; a walking policy that found a
+bug letting it translate horizontally without stepping; agents that circle a goal
+forever because leaving carried no penalty. RL is *superb* at finding simulator
+bugs — that is what a maximizer does when handed an imperfect model.
+
+A weak optimizer against a flawed simulator is fine. A superhuman optimizer
+against a flawed simulator finds every flaw and reports victory.
+
+This flips the "wait for smarter models" instinct one final time. In compilers
+and chip design, a better generator was pure gain because the oracle was
+faithful. **In simulation, a better generator raises the fidelity bar.** Improving
+the generator makes the oracle the binding constraint *faster*.
+
+### The frontier is agents building the sim, not acting in it
+
+[Eureka](https://eureka-research.github.io/) ([arXiv
+2310.12931](https://arxiv.org/abs/2310.12931)) has an LLM write reward functions
+as Python, given the environment source and a natural-language task description.
+On 29 IsaacGym tasks it beat rewards written by human RL practitioners on **83% of
+them**, average normalized improvement **+52%**. GenSim, Gen2Sim, RoboGen, and
+Eurekaverse generate tasks, assets, and curricula; DrEureka folds safety into the
+reward design.
+
+Note what that actually is. The agent is not the policy. **The agent authors the
+oracle.** It is the most direct instance of this document's thesis found so far.
+
+It also maps cleanly onto the search/construction split in §8:
+
+- **RL in sim** = search. The objective lives in the machine (the reward).
+- **Agent writing rewards, scenes, curricula** = construction. The objective lives
+  in someone's head ("make it walk naturally").
+
+And Eureka's real trick is that it **converts construction into search**: it feeds
+training statistics back as "reward reflection" and runs evolutionary iteration
+over candidate rewards. It manufactures a scalar where none existed. That move —
+synthesizing a gradient for a problem that had none — is the transferable idea.
+
+### Where the sim oracle is weakest
+
+Domain randomization only fixes gaps **that can be modeled**: inexact masses,
+frictions, lighting, actuator dynamics. It does not fix aerodynamics, contact
+effects, or response delays.
+
+**Contact is where manipulation lives.**
+
+So the sim oracle is strongest for locomotion, navigation, and perception, and
+weakest for contact-rich manipulation — which is exactly what everyone wants. A
+useful grading question for any company in this space: *which side of the contact
+line is your oracle on?*
+
+### Two businesses hiding under one word
+
+1. **Sim as RL substrate** — sells throughput and fidelity to whoever trains
+   policies. Crowded, NVIDIA-shaped; the moat is fidelity in contact-rich regimes.
+2. **Sim as verifier for agentic construction** — the agent writes the behavior,
+   the task, the recovery logic; the simulator *rejects* it. This is the
+   omarchy/dsh pattern from §6 with a physics engine as the acceptance layer, and
+   it is substantially less explored.
+
+### Against the §12 predicate
+
+- deterministic-but-incomplete method — ✅ (physics engines; contact unsolved)
+- enumerable legal moves — ~partial
+- **failure cheap and reversible — ✅✅**
+
+The third condition isn't merely satisfied. It is the entire product. Simulation
+is the only technology in this document whose *purpose* is manufacturing
+condition 3.
+
+### Market calibration
+
+Reported figures: the Physical AI simulation / digital-twin market at $3.8B
+(2025) projected to $34.6B by 2034 at 28.5% CAGR; >$1.2B of VC into robotics
+simulation startups in 2025. Treat the decade-out CAGR as directional at best —
+market-research projections that far ahead are close to fiction. The VC number is
+the more meaningful signal.
+
+The post that prompted this section was a **recruiter sourcing post** — the author
+states she is supporting an early-stage company in the space. The trend is real;
+the framing is built to attract candidates. Both are true at once.
+
+### The one-line version
+
+> Simulation became foundational because the industry ran out of found oracles
+> and had to start building them.
+
+---
+
+## 8. Two different shapes, not one
 
 The final and most important refinement. "Agent navigates a nondeterministic
 space to find a thing" is true of both domains at an altitude where it stops
@@ -431,7 +565,7 @@ generated API catalog rather than a benchmark harness.
 
 ---
 
-## 8. On creativity
+## 9. On creativity
 
 The agent's edge isn't creativity-as-taste. It's three things:
 
@@ -472,7 +606,7 @@ libc++). Different mechanism, different prediction.
 
 ---
 
-## 9. No, the agent does not go straight to ones and zeros
+## 10. No, the agent does not go straight to ones and zeros
 
 The tempting final inference — if agents are this good, delete MLIR and LLVM IR
 and emit machine code — **inverts the whole thesis.**
@@ -506,7 +640,7 @@ makes aggressive generation safe.
 
 ---
 
-## 10. The primitive
+## 11. The primitive
 
 Most attempts at agent reliability try to make **generation** deterministic —
 constrained decoding, restricted DSLs, templates, fill-in-the-blank scaffolds.
@@ -524,7 +658,7 @@ the acceptance side. That's the marriage.
 
 ---
 
-## 11. Where to look for the next instance
+## 12. Where to look for the next instance
 
 Not a layer in the stack — a predicate. All three must hold:
 
@@ -546,7 +680,7 @@ Meanwhile a linker script sits far down the stack and has all three.
 
 ---
 
-## 12. Open questions
+## 13. Open questions
 
 **The persistence disagreement.** The two codebases genuinely conflict, and
 neither has evidence:
@@ -569,6 +703,12 @@ implementations can't answer for you.
   oracle — or is that just as hard as the design?
 - Does correct-by-construction survive contact with numerics, or does every real
   system end up with a reference-comparison test suite anyway?
+- If a better generator raises the fidelity bar (§7), does simulation fidelity
+  become a treadmill — each capability jump invalidating the oracle that produced
+  it — or does it converge?
+- Is there a general method for *manufacturing* a scalar where a problem had none,
+  the way Eureka's reward reflection does? That would convert construction
+  problems into search problems, and it's the highest-leverage trick in here.
 
 ---
 
