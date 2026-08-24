@@ -86,6 +86,14 @@ writes reward functions and beats human RL practitioners on 83% of 29 IsaacGym
 tasks. Its real trick is converting a construction problem into a search one by
 manufacturing a scalar where none existed.
 
+**Digital twins are the deployed version of the fidelity problem (§7).** The
+strict definition — a simulator with a *closed measurement loop to one physical
+instance* — is the right architectural answer to non-stationary drift. Most
+shipped "twins" skip the loop and become 3D models with dashboards, which is why
+~80% stall at pilot. Two tests: does it make a falsifiable prediction reality
+later grades, and does telemetry actually flow back? **Buy the check, not the
+twin.**
+
 **Automation of sim-building stops at a sharp boundary (§7).** Assets, scenes,
 rewards, and curricula are automated. The physics engine and its calibration
 against a *drifting* physical system are not. Everything on the near side of

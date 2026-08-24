@@ -553,6 +553,88 @@ weakest for contact-rich manipulation — which is exactly what everyone wants. 
 useful grading question for any company in this space: *which side of the contact
 line is your oracle on?*
 
+### Digital twins: the deployed version of this problem
+
+The industry's own attempt to fix non-stationary fidelity, and a useful record of
+what happens when you skip the loop.
+
+**The word covers three different things**, and most confusion lives here:
+
+1. A **3D model with a dashboard** — most of what ships, with no feedback from the
+   physical asset
+2. A **simulation of a class of thing** — "a model of a centrifugal pump." Useful,
+   but that is just a simulator
+3. A **live-synced model of one specific instance** — "a model of *this* pump,
+   recalibrated from *this* pump's sensors." The strict definition, and the only
+   one worth the name
+
+The industry's own framing: *"without telemetry, a digital twin would just be a
+pre-programmed simulation or a static 3D model."*
+
+**Why the strict version is the interesting one.** It is the direct architectural
+answer to the non-stationarity finding above: instead of identifying the system
+once and watching the model rot, you re-identify continuously against telemetry. A
+true digital twin is **a simulator with a closed measurement loop to one physical
+instance.**
+
+Which is also why the ones that skip the loop fail on a schedule — an uncalibrated
+model of a drifting system does not hold steady, it *degrades*.
+
+**Two tests predict success:**
+
+1. **Does it make a falsifiable prediction that reality later checks?** "This
+   bearing fails in ~400 operating hours" → checkable → real. "Here is a 3D view
+   of the plant" → not checkable → furniture.
+2. **Is the loop actually closed?** Telemetry flowing back and recalibrating, not a
+   one-time CAD handoff.
+
+Fail either and the result is not an approximate oracle but an **unchecked** one —
+which is §9's inverted case wearing a hard hat. You already own the real asset; you
+build a lossy model of it; if the model is never graded against the asset, you paid
+for a worse copy of something you have.
+
+**What the evidence shows.** Commonly cited: ~80% of digital twin projects fail,
+and 75% of manufacturing implementations cannot scale past pilot. Treat those as
+directional — they are vendor-blog figures, and "fail" mostly means *stalled at
+pilot* rather than abandoned. The diagnosed cause is precise and matches this
+document: buyers **scope to prediction when the money is in commissioning and
+maintenance** — they buy the top level and skip the middle ones.
+
+Where scoped properly the returns are real: 12–36 month ROI, 25–55% maintenance
+cost reduction, 15–42% operational efficiency, and McKinsey finding **focused
+implementations return 3× comprehensive ones** — model the 20% of operations
+driving 80% of cost. "Focused beats comprehensive by 3×" is the contact-line
+finding above and §14's predicate restated in consultant dialect: the twin works
+where the oracle is good, and the oracle is good in a small part of the plant.
+
+**Where they work**, per the industry's own summary — domains with *specialized
+teams, dense sensors, expensive equipment, and high-stakes failure*:
+
+- **Turbomachinery and jet engines** — the canonical case: characterized physics,
+  dense instrumentation, remaining-useful-life predictions that get graded
+- **Power grid, process plants, semiconductor fabs** — heavy metrology already in
+  place
+- **Formula 1** — extreme instrumentation, immediate feedback
+
+Common pattern: **well-understood physics + dense sensing + a prediction with a
+deadline + failure expensive enough to justify the loop.**
+
+**Where they don't.** "Digital twin of a city / hospital / supply chain." The
+research literature on city digital twins lands on *"no longer hype, not yet
+mainstream"* — and the reason is structural rather than immaturity. Human systems
+have no closed measurement loop and no falsifiable short-horizon prediction, so the
+twin degenerates into visualization. Same reason §15 rules out law: nothing
+underneath for the model to be faithful to.
+
+The sharpest criticism in the literature is that vendors imply digital twins will
+*"overcome the fundamental challenges and limitations related to modeling that we
+already have."* They do not. A twin is a model, subject to every constraint in this
+section. Continuous recalibration narrows the error; it does not abolish it.
+
+> **A digital twin is a simulator plus a check. Buy the check, not the twin.** If
+> you cannot name the prediction it makes and the measurement that later grades it,
+> you are buying a 3D model with a subscription.
+
 ### Two businesses hiding under one word
 
 1. **Sim as RL substrate** — sells throughput and fidelity to whoever trains
