@@ -606,6 +606,114 @@ windows*, not whole functions. **The verifier scales worse than the generator.**
 Path A ships today. Path B is the frontier, and its ceiling is set by how far
 formal equivalence checking scales — not by model capability.
 
+### Why Path B stalls: translation validation up close
+
+Worth unpacking, because "the verifier scales worse than the generator" is a
+complexity-theoretic claim, not an observation about immature tooling.
+
+**What Alive2 actually does.** It does not verify the compiler. It verifies *one
+run of one optimization on one function*. Hand it two pieces of LLVM IR — before
+and after — and it encodes both into SMT and asks Z3: *does there exist an input
+on which the target does something the source did not permit?* UNSAT means the
+transformation is correct here; SAT hands back a concrete counterexample input,
+which is a compiler bug.
+
+It checks **refinement, not equivalence**. The target must be *at least as
+defined* as the source, not identical to it — if the source has UB on some input,
+the target may do anything there. That asymmetry is mandatory, because LLVM
+optimizations legitimately exploit UB and a symmetric equivalence check would
+reject correct optimizations wholesale.
+
+The paper's title is [*Alive2: **Bounded** Translation Validation for
+LLVM*](https://users.cs.utah.edu/~regehr/alive2-pldi21.pdf) (PLDI 2021). The
+limitation is in the name.
+
+**The five blockers**, roughly by severity:
+
+1. **Loops.** Alive2 unrolls to a fixed bound and verifies only that far; past it,
+   bugs can hide. Doing better needs **loop invariants**, and inferring those
+   automatically is *the* classic hard problem of program verification — older
+   than LLVM by decades.
+2. **Memory.** Encoding the heap into SMT is brutally expensive. LLVM's model
+   carries provenance, alignment, block identity, and aliasing; every memory
+   operation inflates the formula.
+3. **SMT complexity itself.** Branches cause path explosion; formula size grows
+   superlinearly. The decidable fragments are NP-hard, and quantifiers plus arrays
+   plus unbounded loops leave decidability behind entirely.
+4. **External calls.** Verifying across a call means modeling the callee.
+   Conservative treatment destroys precision; precise treatment inlines the call
+   graph into the formula.
+5. **UB semantics.** `undef`, `poison`, pointer provenance — LLVM's memory model
+   has genuinely underspecified corners. Alive2 must commit to *some*
+   formalization, which may not be the one LLVM's optimizers assume.
+
+Net: excellent on InstCombine-style peephole rewrites over loop-free,
+memory-light code — where it has found many real miscompilations — and not
+whole-function verification.
+
+**Who is working on it.** Two fronts. Direct LLM-assisted translation validation
+([arXiv 2401.16797](https://arxiv.org/pdf/2401.16797),
+[LLM-Vectorizer](https://arxiv.org/pdf/2406.04693), LLM-VeriOpt above). And, with
+more volume, **LLM-generated loop invariants** — Code2Inv (RL against a proof
+checker), LIPuS, ACInv, GEM-LLM, [invariant
+ranking](https://arxiv.org/pdf/2310.09342), neurosymbolic weakest-precondition
+work, ESBMC integrations. The loop there is this document's pattern exactly:
+
+> LLM proposes a candidate invariant → SMT checks inductiveness → the
+> counterexample returns to the LLM as a repair hint → repeat.
+
+It is promising for a structural reason: **guessing an invariant is creative and
+unreliable (LLM strength); checking one is mechanical and cheap (SMT strength).**
+Verifying inductiveness costs vastly less than discovering the invariant.
+
+**Is it solvable?** Three tiers, different answers:
+
+| Scope | Status |
+|---|---|
+| Loop-free, bounded, memory-light | **Solved** — Alive2 does it today |
+| Loops with inferrable invariants | **Active, genuinely promising** |
+| Arbitrary whole functions — unbounded loops, complex memory, external calls | **Not close; blocked by theory, not engineering** |
+
+The floor is hard: **program equivalence is undecidable in general** — it reduces
+to halting. No quantity of compute or model capability removes that.
+
+And the asymmetry is structural, not incidental: **generation cost is roughly
+linear in output size; verification cost is superlinear.** Every increase in the
+unit the generator attempts widens the gap. That is why the claim is not "the
+tools need to catch up."
+
+### The escape hatch, which is Path A wearing a third costume
+
+The field's real answer dissolves the question rather than answering it:
+
+> **Don't verify the output. Verify the transformation.**
+
+The original Alive — before Alive2 — verified InstCombine **rules** written in a
+DSL. Verify a peephole rule *once*, apply it a billion times; the composition
+holds by induction. That is how bounded verification buys unbounded application.
+
+Which is:
+
+- §4's correct-by-construction (Luminal verifying rewrite rules, not programs)
+- Path A above (MLGO's action space containing only legal moves)
+- Alive's rule verification
+
+— the same move in three costumes. The field keeps rediscovering it because it is
+the only thing that beats the scaling asymmetry.
+
+So the sharpest reading of "does Path B scale" is **it does not have to.** The
+right role for an LLM in a compiler is probably not emitting optimized code to be
+verified, but **proposing new optimization rules** that get verified once and
+installed permanently. Generation stays creative and unreliable; verification
+becomes one-time and cheap; application becomes unlimited and free. Souper
+already has this shape, and an LLM proposing candidate rules for SMT-verified
+installation is its natural extension.
+
+The caveat is Lattner's objection from §4 resurfacing: **not every optimization is
+a local rewrite rule.** Global scheduling, layout changes, and whole-program
+restructuring do not decompose that way, and the wins stay bounded by the closure
+of the rule set.
+
 ### Where the difficulty actually moved
 
 Note *which* MLGO result was large:
@@ -832,9 +940,17 @@ implementations can't answer for you.
 - Is there a general method for *manufacturing* a scalar where a problem had none,
   the way Eureka's reward reflection does? That would convert construction
   problems into search problems, and it's the highest-leverage trick in here.
-- Path B in §8 is gated by how far formal equivalence checking scales, not by
-  model capability. Does translation validation ever get past peephole windows
-  to whole functions — and if not, is Path A the permanent ceiling?
+- Does an LLM proposing *optimization rules* for one-time SMT verification (§8)
+  actually work? It is the natural extension of Souper and it sidesteps the
+  scaling asymmetry entirely — but nobody has shown the proposal distribution is
+  good enough to be worth the verification budget.
+- Rule-based composition can only reach the closure of the rule set. How much of
+  real optimization is *not* a local rewrite — global scheduling, layout,
+  whole-program restructuring — and is that residue where all the remaining
+  value lives?
+- Does LLM-proposed loop-invariant inference move the middle tier of §8's
+  solvability table, or does it stall on the same programs symbolic methods
+  already stalled on?
 
 ---
 
