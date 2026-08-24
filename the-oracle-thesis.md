@@ -223,6 +223,7 @@ format. Expanding coverage reintroduces the complexity you claimed to escape.
 | AlphaChip | RL policy | computable placement cost | ✅ |
 | Luminal / tinygrad | e-graph search | measured kernel latency | ✅ |
 | Math counterexamples | LLM-guided search | check one object against one predicate | ✅ |
+| Compiler heuristics | RL policy (MLGO) | the compiler itself — exact, see §8 | ✅ but small |
 | Spec → RTL | LLM sampling | *doesn't exist* | ❌ 23% |
 | Robot policy | RL in sim | **simulator — approximate, see §7** | ⚠️ depends |
 
@@ -466,7 +467,7 @@ reward design.
 Note what that actually is. The agent is not the policy. **The agent authors the
 oracle.** It is the most direct instance of this document's thesis found so far.
 
-It also maps cleanly onto the search/construction split in §8:
+It also maps cleanly onto the search/construction split in §9:
 
 - **RL in sim** = search. The objective lives in the machine (the reward).
 - **Agent writing rewards, scenes, curricula** = construction. The objective lives
@@ -499,7 +500,7 @@ line is your oracle on?*
    omarchy/dsh pattern from §6 with a physics engine as the acceptance layer, and
    it is substantially less explored.
 
-### Against the §12 predicate
+### Against the §13 predicate
 
 - deterministic-but-incomplete method — ✅ (physics engines; contact unsolved)
 - enumerable legal moves — ~partial
@@ -528,7 +529,129 @@ the framing is built to attract candidates. Both are true at once.
 
 ---
 
-## 8. Two different shapes, not one
+## 8. Compilers: the perfect oracle, and where the difficulty goes instead
+
+*The counterpart to §7. If a robot simulator is the worst oracle in this
+document, a compiler is the best — and it is instructive that the problem does
+not therefore disappear.*
+
+The tempting move after §7 is: *simulate the compiler, train an LLM in that RL
+environment, reach parity with compilers.* The framing is backwards in a useful
+way.
+
+**You do not need to simulate a compiler. The compiler *is* the environment.**
+
+A simulator is a *model of* reality, built because reality is too slow and
+expensive to query. A compiler models nothing — it is the ground truth itself,
+running on a laptop in milliseconds, deterministically, for free, in parallel.
+
+**Sim-to-real gap: zero.** There is no reality to be distant from.
+
+| | Robot simulator (§7) | Compiler as environment |
+|---|---|---|
+| Faithful? | ❌ approximate, wrong invisibly | ✅ it *is* the thing |
+| Cost per query | GPU-seconds | milliseconds |
+| Reproducible | mostly | bit-exact |
+| Correctness oracle | hand-built, leaky | built in — verifier, type checker, tests |
+| Scalar | shaped reward, Goodhartable | size, instruction count, measured runtime |
+
+By the standards of this document, that is close to the best RL environment that
+exists. Which is why it is not hypothetical — it already shipped.
+
+### It is already in LLVM
+
+**MLGO** (Machine Learning Guided Optimizations) replaced two LLVM heuristics
+with RL-trained policies, both merged upstream and deployed in production:
+
+- **Inlining-for-size** — 6.3% size reduction on C++ translation units, deployed
+  on Fuchsia
+- **Register allocation for performance** — 0.3%–1.5% QPS across Google's
+  internal datacenter applications, generalizing across different software
+
+Phase-ordering RL (Autophase, CORL, POSET-RL) reports up to **1.32× over LLVM's
+hardcoded `-O3` sequence**. And at **CGO 2026**, [LLM-VeriOpt](https://2026.cgo.org/details/cgo-2026-papers/37/LLM-VeriOpt-Verification-Guided-Reinforcement-Learning-for-LLM-Based-Compiler-Optimi)
+builds the loop directly: RL on an LLM (Qwen-3B, GRPO) where the reward comes
+from **Alive2**, LLVM's formal translation validator — semantic equivalence as
+the training signal. 5.4× improvement in code successfully modified over the
+un-finetuned base model.
+
+### "As perfect as compilers" is the wrong target
+
+Compilers are not imperfect at **correctness**. Modulo bugs, they are correct.
+They are imperfect at **choosing among options that are all correct**:
+
+inlining thresholds · phase ordering · register allocation and spill placement ·
+unroll factors · vectorization profitability · instruction scheduling
+
+Each is NP-hard or worse, so compilers ship hand-tuned heuristics with magic
+constants. *That* is the loss. The target is not parity — it is **beating the
+compiler at the choices while remaining exactly as correct as it already is.**
+
+### The design fork that decides whether this ships
+
+**Path A — the model decides *inside* the compiler.** The policy answers "inline:
+yes/no," and LLVM performs the transformation with its correctness machinery
+intact. The action space contains **only semantics-preserving moves**, so the
+model *cannot* emit incorrect code.
+
+That is §4's correct-by-construction applied to the **action space** rather than
+to rewrite rules — and it is why MLGO could ship into a production compiler where
+a miscompile would be catastrophic.
+
+**Path B — the model emits code.** Correctness returns to the model and an
+equivalence checker must join the loop. That is LLM-VeriOpt's design, and it
+works — but Alive2-style translation validation is practical over *peephole
+windows*, not whole functions. **The verifier scales worse than the generator.**
+
+Path A ships today. Path B is the frontier, and its ceiling is set by how far
+formal equivalence checking scales — not by model capability.
+
+### Where the difficulty actually moved
+
+Note *which* MLGO result was large:
+
+- **6.3%** on size — because binary size is exact, free to measure, deterministic
+- **0.3–1.5%** on performance — because runtime is noisy, machine-specific,
+  expensive to measure, and needs many runs for usable signal
+
+The environment is perfect in both cases. **The reward is what differs.** And it
+Goodharts in the familiar way: optimize for a benchmark suite and get a compiler
+that excels on SPEC and is mediocre on your code. That failure is old enough to
+have a name — *benchmarketing*.
+
+Second difficulty: **generalization**. The environment is perfect; the
+*distribution over programs* is not. A policy tuned on one corpus must hold on
+code it has never seen, which is why MLGO's regalloc result emphasizes
+generalizing across software rather than its raw number.
+
+So the pattern survives even the best case: **a perfect oracle relocates the
+difficulty to reward design and task distribution. It does not remove it.**
+
+### The honest ceiling
+
+0.3–1.5% QPS. At Google's scale that is worth a great deal of money. It is not a
+revolution in code quality.
+
+Heuristic-replacement wins land in the single digits because the heuristics were
+already decent and the space around them is flat. The order-of-magnitude wins
+live where §2 found them — **algorithm choice, data layout, and hand-written
+kernels the compiler was never going to autovectorize** — all of which sit
+*above* the compiler, in the code a person writes.
+
+### The pair, stated together
+
+> §7 — an oracle that is cheap but **unfaithful**: difficulty concentrates in
+> fidelity.
+>
+> §8 — an oracle that is cheap and **perfectly faithful**: difficulty concentrates
+> in what you choose to measure, and in whether the training distribution
+> resembles the deployment one.
+>
+> There is no configuration in which building the oracle stops being the work.
+
+---
+
+## 9. Two different shapes, not one
 
 The final and most important refinement. "Agent navigates a nondeterministic
 space to find a thing" is true of both domains at an altitude where it stops
@@ -565,7 +688,7 @@ generated API catalog rather than a benchmark harness.
 
 ---
 
-## 9. On creativity
+## 10. On creativity
 
 The agent's edge isn't creativity-as-taste. It's three things:
 
@@ -606,7 +729,7 @@ libc++). Different mechanism, different prediction.
 
 ---
 
-## 10. No, the agent does not go straight to ones and zeros
+## 11. No, the agent does not go straight to ones and zeros
 
 The tempting final inference — if agents are this good, delete MLIR and LLVM IR
 and emit machine code — **inverts the whole thesis.**
@@ -640,7 +763,7 @@ makes aggressive generation safe.
 
 ---
 
-## 11. The primitive
+## 12. The primitive
 
 Most attempts at agent reliability try to make **generation** deterministic —
 constrained decoding, restricted DSLs, templates, fill-in-the-blank scaffolds.
@@ -658,7 +781,7 @@ the acceptance side. That's the marriage.
 
 ---
 
-## 12. Where to look for the next instance
+## 13. Where to look for the next instance
 
 Not a layer in the stack — a predicate. All three must hold:
 
@@ -680,7 +803,7 @@ Meanwhile a linker script sits far down the stack and has all three.
 
 ---
 
-## 13. Open questions
+## 14. Open questions
 
 **The persistence disagreement.** The two codebases genuinely conflict, and
 neither has evidence:
@@ -709,6 +832,9 @@ implementations can't answer for you.
 - Is there a general method for *manufacturing* a scalar where a problem had none,
   the way Eureka's reward reflection does? That would convert construction
   problems into search problems, and it's the highest-leverage trick in here.
+- Path B in §8 is gated by how far formal equivalence checking scales, not by
+  model capability. Does translation validation ever get past peephole windows
+  to whole functions — and if not, is Path A the permanent ceiling?
 
 ---
 
