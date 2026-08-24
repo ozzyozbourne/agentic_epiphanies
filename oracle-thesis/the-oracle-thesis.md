@@ -3,7 +3,8 @@
 *Notes from a long conversation, 2026-08-22 → 2026-08-24.*
 
 A single claim, arrived at by walking through assembly, video codecs, chip
-design, compiler backends, and two agentic codebases:
+design, compiler backends, two agentic codebases, robotics simulation, neural
+computers, and finally domains outside software altogether:
 
 > **An agent plus a cheap verifier is a search engine. An agent without one is a
 > generator of plausible text.**
@@ -37,7 +38,7 @@ alien optimizations no compiler could reach.
   semantics for *every* input including ones you never hit, it can't change your
   data layout, and it can't change your algorithm. The last two are the biggest
   wins available — and you capture them in a high-level language, not in asm.
-- *The dav1d example argues the opposite of the thesis* (see below).
+- *The dav1d example argues the opposite of that intuition* (see below).
 
 ---
 
@@ -223,6 +224,7 @@ format. Expanding coverage reintroduces the complexity you claimed to escape.
 | AlphaChip | RL policy | computable placement cost | ✅ |
 | Luminal / tinygrad | e-graph search | measured kernel latency | ✅ |
 | Math counterexamples | LLM-guided search | check one object against one predicate | ✅ |
+| AlphaFold | learned structure predictor | CASP held-out benchmark + experimental structures | ✅ see §15 |
 | Compiler heuristics | RL policy (MLGO) | the compiler itself — exact, see §8 | ✅ but small |
 | Spec → RTL | LLM sampling | *doesn't exist* | ❌ 23% |
 | Robot policy | RL in sim | **simulator — approximate, see §7** | ⚠️ depends |
@@ -412,8 +414,12 @@ AV1 conformance vectors. EDA already had a placement cost function. Kernel
 latency is just "run it." A counterexample check is the definition of the
 conjecture.
 
-Robotics has no oracle lying around. Reality is the only ground truth, and it is
-slow, expensive, destructive, and unrepeatable.
+Robotics has no *usable* oracle lying around. Reality is ground truth and it does
+exist — it is simply slow, expensive, destructive, and unrepeatable. That is a
+different situation from spec→RTL, where no oracle exists at all, and the
+distinction carries weight later: §14 and §15 turn on **present-but-unusable**
+(robotics, production, clinical trials) versus **genuinely absent** (spec→RTL,
+counterfactuals).
 
 So somebody has to **build** the oracle — and building oracles is a business in a
 way that using one never was. That is the entire content of "simulation as
@@ -589,9 +595,11 @@ model of a drifting system does not hold steady, it *degrades*.
    one-time CAD handoff.
 
 Fail either and the result is not an approximate oracle but an **unchecked** one —
-which is §9's inverted case wearing a hard hat. You already own the real asset; you
-build a lossy model of it; if the model is never graded against the asset, you paid
-for a worse copy of something you have.
+this section's configuration with the validation loop removed, which is worse than
+either §7 or §9. Note it is *not* §9: building the model is justified here, because
+the asset cannot be queried the way you need — nobody runs a jet engine to failure a
+thousand times to test a maintenance policy. The error is not modelling something
+you already have. It is never grading the model against the thing it models.
 
 **What the evidence shows.** Commonly cited: ~80% of digital twin projects fail,
 and 75% of manufacturing implementations cannot scale past pilot. Treat those as
@@ -650,9 +658,10 @@ section. Continuous recalibration narrows the error; it does not abolish it.
 - enumerable legal moves — ~partial
 - **failure cheap and reversible — ✅✅**
 
-The third condition isn't merely satisfied. It is the entire product. Simulation
-is the only technology in this document whose *purpose* is manufacturing
-condition 3.
+The third condition isn't merely satisfied. It is the entire product. Simulation is
+the clearest case in this document of a technology whose *purpose* is manufacturing
+condition 3 — §14's deterministic simulation testing is the same move applied to
+distributed systems.
 
 ### Market calibration
 
@@ -1515,8 +1524,9 @@ TPC — all sitting there.
 
 So invert the search order. Do not pick a prestigious domain and go hunting for an
 oracle inside it. **Scan for existing good oracles with no one exploiting them,
-then go there.** That is how every success in this document actually happened —
-none of them built the oracle first.
+then go there.** That is how nearly every success in this document happened — none
+of them built their *own* oracle; each found one already standing, usually built by
+domain people over decades for reasons that had nothing to do with AI.
 
 The exception is §7's robotics case, where the oracle genuinely had to be
 manufactured. Note that this is exactly why it turned into an industry: it was the

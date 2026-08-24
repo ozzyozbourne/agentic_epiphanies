@@ -89,10 +89,12 @@ manufacturing a scalar where none existed.
 **Digital twins are the deployed version of the fidelity problem (§7).** The
 strict definition — a simulator with a *closed measurement loop to one physical
 instance* — is the right architectural answer to non-stationary drift. Most
-shipped "twins" skip the loop and become 3D models with dashboards, which is why
-~80% stall at pilot. Two tests: does it make a falsifiable prediction reality
-later grades, and does telemetry actually flow back? **Buy the check, not the
-twin.**
+shipped "twins" skip the loop and become 3D models with dashboards. Commonly
+cited (and vendor-sourced, so directional): ~80% of projects fail and 75% cannot
+scale past pilot, with the diagnosed cause being that buyers scope to prediction
+when the money is in commissioning and maintenance. Two tests: does it make a
+falsifiable prediction reality later grades, and does telemetry actually flow
+back? **Buy the check, not the twin.**
 
 **Automation of sim-building stops at a sharp boundary (§7).** Assets, scenes,
 rewards, and curricula are automated. The physics engine and its calibration
