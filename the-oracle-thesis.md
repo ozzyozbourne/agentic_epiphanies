@@ -426,9 +426,10 @@ simulator." Every one of them is **managing the oracle's error.**
 
 ### The new category: the approximate oracle
 
-Every oracle in the §5 table is *faithful*: it tells you the truth or it tells
-you nothing. A simulator is the first entry that confidently tells you things
-that are **wrong**, in ways invisible from inside it.
+Every oracle in §5 *above this section* is faithful: it tells you the truth or it
+tells you nothing. A simulator is the first entry that confidently tells you
+things that are **wrong**, in ways invisible from inside it. (§9 later adds a
+second unfaithful row, for a different reason.)
 
 That inverts the criterion used everywhere else in this document. We kept saying
 *cheap and fast*. For simulation, cheap and fast is the **free** part — GPUs
@@ -465,8 +466,11 @@ them**, average normalized improvement **+52%**. GenSim, Gen2Sim, RoboGen, and
 Eurekaverse generate tasks, assets, and curricula; DrEureka folds safety into the
 reward design.
 
-Note what that actually is. The agent is not the policy. **The agent authors the
-oracle.** It is the most direct instance of this document's thesis found so far.
+Note what that actually is. The agent is not the policy — **it authors the
+reward**, while the physics engine stays exact. Not the oracle itself: §13 sorts
+out why that distinction is the whole game, and Eureka's rewards mean something
+only because the simulator actually runs the episode. It is the most direct
+instance in this document of learning *upstream of* a retained check.
 
 It also maps cleanly onto the search/construction split in §10:
 
@@ -589,9 +593,9 @@ the framing is built to attract candidates. Both are true at once.
 
 ## 8. Compilers: the perfect oracle, and where the difficulty goes instead
 
-*The counterpart to §7. If a robot simulator is the worst oracle in this
-document, a compiler is the best — and it is instructive that the problem does
-not therefore disappear.*
+*The counterpart to §7. If a robot simulator is the least faithful oracle so far,
+a compiler is the most — and it is instructive that the problem does not
+therefore disappear. (§9 finds a worse configuration still.)*
 
 The tempting move after §7 is: *simulate the compiler, train an LLM in that RL
 environment, reach parity with compilers.* The framing is backwards in a useful
@@ -767,6 +771,12 @@ becomes one-time and cheap; application becomes unlimited and free. Souper
 already has this shape, and an LLM proposing candidate rules for SMT-verified
 installation is its natural extension.
 
+This also answers §4's second leak — that rewrite rules are hand-written and a bad
+one miscompiles silently, everywhere. Alive-style rule verification is exactly the
+fix: the rule is discharged by an SMT solver once, rather than trusted because a
+human wrote it. Correct-by-construction is only as good as how the rules were
+established, and *verified* rules are a different proposition from *asserted* ones.
+
 The caveat is Lattner's objection from §4 resurfacing: **not every optimization is
 a local rewrite rule.** Global scheduling, layout changes, and whole-program
 restructuring do not decompose that way, and the wins stay bounded by the closure
@@ -803,17 +813,6 @@ already decent and the space around them is flat. The order-of-magnitude wins
 live where §2 found them — **algorithm choice, data layout, and hand-written
 kernels the compiler was never going to autovectorize** — all of which sit
 *above* the compiler, in the code a person writes.
-
-### The pair, stated together
-
-> §7 — an oracle that is cheap but **unfaithful**: difficulty concentrates in
-> fidelity.
->
-> §8 — an oracle that is cheap and **perfectly faithful**: difficulty concentrates
-> in what you choose to measure, and in whether the training distribution
-> resembles the deployment one.
->
-> There is no configuration in which building the oracle stops being the work.
 
 ---
 
@@ -971,9 +970,9 @@ expensive mistake available.
 
 ## 10. Two different shapes, not one
 
-The final and most important refinement. "Agent navigates a nondeterministic
-space to find a thing" is true of both domains at an altitude where it stops
-being useful. Underneath:
+A refinement that governs most of what follows — §13 sharpens it further. "Agent
+navigates a nondeterministic space to find a thing" is true of both domains at an
+altitude where it stops being useful. Underneath:
 
 | | **Search** (chip, compiler, kernels) | **Construction** (application layer) |
 |---|---|---|
@@ -1381,10 +1380,12 @@ implementations can't answer for you.
   hand-written ones (§14)? UED says the inversion works in robotics, but nobody
   has run it where the fairness constraint is a *written spec* rather than a
   learned antagonist — which should be strictly easier.
-- Is there any task where a learned approximation of an exactly-available system
-  wins on a real axis (§9)? Every current instance loses on all of cost, latency,
-  energy, and capability — but *learned indexes* and *learned cache replacement*
-  are arguable counterexamples worth examining.
+- Is there any task where a learned approximation **wins while discarding the
+  exact path** (§9)? Learned indexes and learned cache replacement do beat their
+  exact counterparts, but both retain a check — the confirming probe, and
+  correctness that a bad eviction cannot touch — so they belong in §13's success
+  column rather than contradicting §9. The open question is narrower and, so far,
+  unanswered: does anything win with *nothing* exact left underneath it?
 
 ---
 
