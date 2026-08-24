@@ -1040,6 +1040,65 @@ reject before reaching a prompt.
 Nondeterminism fully contained on the generation side. Determinism entirely on
 the acceptance side. That's the marriage.
 
+### Where exactly the line falls
+
+The obvious compression of §9 is *"you can't bitter-lesson the oracle."* That is
+too strong, and §7 refutes it directly: Eureka **learns the reward function** and
+beats human RL practitioners on 83% of tasks. A learned oracle displacing a
+hand-crafted one, working.
+
+So the question is not whether an oracle can be learned. It is *which part*
+cannot. Sorting the cases settles it:
+
+| | What was learned | What stayed exact |
+|---|---|---|
+| Eureka (§7) | the reward function | the physics engine it trains in |
+| MLGO (§8) | the inlining / regalloc heuristic | LLVM's transformation correctness |
+| Souper + LLM (§8) | which rewrite rules to propose | SMT verification of each rule |
+| e-graph search (§4) | which candidate program to extract | the rules, verified in advance |
+| dav1d (§2) | — (human intuition) | conformance vectors |
+| Learned indexes | the position predictor | the final probe confirming the key |
+| Learned cache replacement | the eviction policy | correctness untouched — you only miss |
+| Neural network potentials | a fast energy approximation | DFT, retained to certify the error bar |
+| **NeuralOS (§9)** | **the substrate itself** | **nothing** |
+
+Two properties run through every success and are absent from the one failure:
+
+1. **Errors cost performance, not correctness.** A bad inlining decision yields
+   slower code; a bad learned-index prediction yields an extra probe; a bad
+   eviction yields a cache miss. In NeuralOS a wrong pixel is not a *slow*
+   computer — it is a *wrong* one.
+2. **A check survives downstream.** Something exact still stands between the
+   learned component and the answer anyone trusts.
+
+Which gives the sharper statement of the same primitive:
+
+> **You can learn anything upstream of the check. You cannot learn the check
+> itself and still have a check.**
+
+That is stronger than "the oracle must be built," because it says *where the line
+falls* rather than only asserting one exists. Every success in this document sits
+upstream of a retained verifier. NeuralOS is the sole case that tried to learn
+away the thing making its output trustworthy, leaving no layer beneath to appeal
+to — the approximation *is* the product.
+
+### The honest ceiling
+
+One refinement that matters for anything built on this:
+
+**Even where a learned oracle wins, the exact one does not disappear — it gets
+demoted.** Neural network potentials did not delete DFT; DFT moved from per-query
+to per-validation, certifying the approximation's error bar on held-out data.
+Learned indexes keep the exact probe. Eureka's rewards are trustworthy only
+because the simulator actually runs the episode.
+
+So the pattern is not *learning replaces the oracle*. It is:
+
+> **Learning takes over the hot path while the exact oracle retreats to
+> certification duty.**
+
+It can be moved, cheapened, and called far less often. It cannot be removed.
+
 ---
 
 ## 14. Where to look for the next instance
