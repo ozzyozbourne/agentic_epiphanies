@@ -1194,6 +1194,73 @@ DST's binding constraint is that somebody must author good properties, and almos
 nobody does. An agent writing properties sits **upstream of the check** (§13): a
 wrong property costs compute, not correctness.
 
+**The inversion has prior art.** Learning the *challenge generator* rather than
+the *solution generator* is a decade-old idea in robotics with a formal name —
+**Unsupervised Environment Design (UED)**. [POET](https://arxiv.org/pdf/2203.10941)
+co-evolves environments and agents (mutate environments, optimize paired agents,
+periodically transfer agents across them), acting as an automatic curriculum
+builder. **PAIRED** runs an environment adversary maximizing **regret**,
+approximated as the performance gap between a student and a second antagonist
+agent. [ACCEL](https://accelagent.github.io/) combines evolution with
+regret-based design. **Automatic Domain Randomization** — OpenAI's Rubik's-cube
+hand — expands randomization ranges as the policy improves, and shipped in a real
+robotics result.
+
+The closest structural analogue is **autonomous-vehicle safety validation**: a
+system that reality cannot test enough, so adversarial scenarios are generated in
+simulation. That field is already running the LLM version —
+[ScenGE](https://arxiv.org/html/2508.14527v1) has an LLM generate core adversarial
+threats from text prompts before evolving trajectories; VILTA runs a VLM-in-the-loop
+adversary; GOOSE uses goal-conditioned RL for scenario generation.
+
+**And it has a known failure mode.** Reward a generator purely for making the
+system fail and it produces **unsolvable scenarios** — a robot asked to walk on a
+wall, a network dropping every packet forever, a driving scene where collision is
+geometrically unavoidable. The generator wins and nothing is learned. The field's
+fixes:
+
+| Fix | Mechanism |
+|---|---|
+| PAIRED | maximize **regret**, not failure — if the antagonist also fails, regret is zero, so unsolvable environments earn nothing |
+| POET | a **minimal criterion** — accept only environments neither too hard nor too easy |
+| AV scenario work | **feasibility and realism constraints** — kinematic plausibility, naturalistic priors, feasibility-constrained resampling |
+
+Worth noting the AV field's own diagnosis: data-driven generators *underrepresent*
+safety-critical events, because collisions are rare in naturalistic data. The
+scenario distribution cannot simply be learned from logs; it has to be pushed
+against deliberately.
+
+**The DST analogue of an unsolvable environment is fault injection outside the
+stated fault model.** If a system promises to survive *f* of *2f+1* node failures,
+killing *2f+1* is not a bug — it is out of spec, and an unconstrained
+fault-injecting agent will find that immediately and report a triumph.
+
+Which surfaces the one place this domain is *better* positioned than robotics:
+
+> **Robotics had to invent regret because it has no formal spec. Distributed
+> systems already have one.**
+
+PAIRED approximates "was this scenario fair?" with a *learned* antagonist, because
+nothing states what a robot should be able to handle. Distributed systems ship
+explicit fault models and safety/liveness properties. **The spec is the
+feasibility constraint, and it is exact rather than learned** — a strictly better
+discriminator than anything UED has.
+
+That is why both halves must be written:
+
+- **the property** defines what counts as a legitimate failure
+- **the scenario** searches for one inside that boundary
+
+Scenarios alone give the degenerate adversary. Properties alone leave nothing
+hunting.
+
+```
+agent writes property (what must hold)  ──┐
+                                          ├─→ deterministic hypervisor ─→ violation?
+agent writes fault scenario (within the  ──┘         (exact, replayable)
+  declared fault model)
+```
+
 Ranked by tractability:
 
 1. **Agent writes invariants and fault scenarios for DST** — clean oracle, cheap
@@ -1253,6 +1320,10 @@ implementations can't answer for you.
 - Does LLM-proposed loop-invariant inference move the middle tier of §8's
   solvability table, or does it stall on the same programs symbolic methods
   already stalled on?
+- Does an agent writing DST properties and fault scenarios actually beat
+  hand-written ones (§14)? UED says the inversion works in robotics, but nobody
+  has run it where the fairness constraint is a *written spec* rather than a
+  learned antagonist — which should be strictly easier.
 - Is there any task where a learned approximation of an exactly-available system
   wins on a real axis (§9)? Every current instance loses on all of cost, latency,
   energy, and capability — but *learned indexes* and *learned cache replacement*
