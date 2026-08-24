@@ -1336,7 +1336,117 @@ makes the substrate worth having.
 
 ---
 
-## 15. Open questions
+## 15. Beyond software: where the oracles already are
+
+*Applying §14's predicate outside computing — and finding that the two domains
+people reach for first are the two that fail it hardest.*
+
+### Domains don't qualify. Sub-problems do
+
+§2's lesson generalizes: dav1d's kernels and dav1d's bitstream parser live in one
+codebase and are opposite cases. "Medicine" is not the unit of analysis either.
+
+**Medicine splits sharply:**
+
+| Sub-problem | Oracle | Status |
+|---|---|---|
+| Protein structure | crystallography / cryo-EM | ✅ excellent — and *why* AlphaFold worked |
+| Molecular properties | DFT, then neural potentials | ✅ already in §13's table |
+| Imaging with pathology confirmation | biopsy | ✅ real, and results followed |
+| Drug efficacy | randomized controlled trials | ⚠️ §7-shaped — exact, but years and millions |
+| **Did this treatment help *this* patient?** | **the counterfactual** | ❌ **unobservable in principle** |
+
+That last row is not an expensive oracle. It is an absent one, absent for a
+fundamental reason: the same patient cannot be run down both branches. No
+quantity of compute repairs it.
+
+**AlphaFold is the strongest support for this document's thesis, read correctly.**
+CASP ran as a rigorous held-out benchmark with experimental ground truth for
+**26 years** before AlphaFold2. The domain built its oracle over three decades,
+and then a model arrived and collected. The oracle-building came first — and was
+not done by ML people.
+
+**Law is worse than oracle-less.** Its ground truth is *performative*: a ruling
+does not discover a pre-existing fact, it creates one. Physics has facts you
+measure; law has decisions that manufacture facts. Simulation has nothing
+underneath it to be faithful to.
+
+Narrow pockets do have oracles — procedural and filing compliance (rule-based,
+checkable), citation retrieval, clause extraction. Those are tractable. "Will this
+argument persuade this judge" is not, and will not become so by scaling.
+
+### Both fail the predicate on the condition that matters
+
+Against §14:
+
+1. deterministic method exists but incomplete — medicine partly, law barely
+2. enumerable legal moves — no, in both
+3. **failure cheap and reversible — emphatically no, in both**
+
+And against §13's test — *do errors cost performance or correctness?* — a wrong
+diagnosis is not a *slow* diagnosis. That places both domains on the NeuralOS side
+of §13's table rather than the MLGO side, which is precisely where §7's inversion
+is most dangerous: a strong optimizer against an approximate oracle produces
+confident, systematic, invisible error.
+
+### Where the predicate genuinely holds outside software
+
+Ranked by oracle quality, the only ranking that matters:
+
+1. **Weather and climate** — the best non-software oracle in existence. You learn
+   within hours whether a forecast was right, globally, against decades of
+   archived observation. GraphCast worked for exactly this reason, and it is
+   underrated as a template.
+2. **Computational chemistry and materials** — DFT as the expensive-but-faithful
+   oracle, neural potentials as the learned hot path, DFT retained for
+   certification. Textbook §13.
+3. **Structural biology** — experimental ground truth; already proven.
+4. **Logistics, scheduling, industrial process control** — computable cost
+   functions, hard feasibility constraints, cheap simulation. Unglamorous and
+   underexploited.
+5. **Fusion plasma control** — simulator plus a real tokamak closing the loop.
+6. **Medicine, physical-measurement half only.** The counterfactual half, never.
+7. **Finance** — has an oracle (history) that is a Goodhart trap: non-stationary,
+   overfittable, regime-changing. It lies in exactly the way §7 warns about.
+8. **Law** — procedural pockets only.
+
+### What oracle-building actually is as work
+
+Worth calibrating before committing to it. It is not primarily an ML job:
+
+- **Instrumentation and measurement** — extracting ground truth from a domain that
+  was not recording it
+- **Benchmark design with held-out discipline** — CASP's real achievement was the
+  *protocol*, not the data
+- **Adjudicating what "correct" means** where practitioners disagree
+
+That is closer to **metrology and standards work** than to model training, which
+is why §7's durable skill was "quantify and close the gap" rather than "operate
+the tool."
+
+### The strategic inversion
+
+The highest-leverage move is usually **not** building a simulator. It is finding a
+domain that already has a neglected oracle nobody has pointed a generator at.
+Weather had one for decades. CASP had one for decades. Conformance vectors, SPEC,
+TPC — all sitting there.
+
+So invert the search order. Do not pick a prestigious domain and go hunting for an
+oracle inside it. **Scan for existing good oracles with no one exploiting them,
+then go there.** That is how every success in this document actually happened —
+none of them built the oracle first.
+
+The exception is §7's robotics case, where the oracle genuinely had to be
+manufactured. Note that this is exactly why it turned into an industry: it was the
+expensive one.
+
+> **The generator side is now free while the oracle side is still artisanal. That
+> asymmetry is the opportunity — and it is a reason to go where oracles already
+> exist, not where they would have to be invented.**
+
+---
+
+## 16. Open questions
 
 **The persistence disagreement.** The two codebases genuinely conflict, and
 neither has evidence:

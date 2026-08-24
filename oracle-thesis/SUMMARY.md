@@ -165,7 +165,36 @@ learned antagonist, must bound the search.
 
 ---
 
-## Open questions (§15)
+## Beyond software (§15)
+
+Domains don't qualify — sub-problems do. **Medicine splits**: protein structure,
+molecular properties, and pathology-confirmed imaging have real oracles (which is
+*why* those results happened); "did this treatment help *this* patient" is a
+counterfactual and unobservable in principle. **Law is worse than oracle-less** —
+its ground truth is performative, created by the ruling rather than discovered, so
+there is nothing for a simulator to be faithful to. Both fail §14's third
+condition, and by §13's test their errors cost correctness rather than
+performance.
+
+**AlphaFold is the thesis, read correctly:** CASP ran as a held-out benchmark with
+experimental ground truth for **26 years** before AlphaFold2. The oracle came
+first, built by domain people, not ML people.
+
+Where the predicate actually holds outside software, ranked by oracle quality:
+**weather and climate** (the best non-software oracle in existence — you learn
+within hours, globally, against decades of archive), **computational chemistry and
+materials**, **structural biology**, **logistics and industrial control**, **fusion
+plasma control**. Finance has an oracle that is a Goodhart trap.
+
+And the strategic point: oracle-building is closer to **metrology and standards
+work** than to model training. So invert the search — don't pick a prestigious
+domain and hunt for an oracle inside it; **scan for existing good oracles nobody
+is exploiting.** Every success in this document found one lying around rather than
+building it.
+
+---
+
+## Open questions (§16)
 
 The sharpest ones:
 
