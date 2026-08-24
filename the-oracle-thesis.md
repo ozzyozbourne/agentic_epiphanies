@@ -1121,6 +1121,96 @@ Meanwhile a linker script sits far down the stack and has all three.
 
 **Look for the predicate, not the layer.**
 
+### Worked example: system design
+
+A concrete pass through the predicate, since the abstract version is easy to
+agree with and hard to apply.
+
+**First correction: system design is not the no-oracle case.** The oracle is
+**production** — exact, authoritative, and unusable: months to years of latency,
+enormous cost, unrepeatable, and destructive when it answers. That is structurally
+identical to robotics, which makes this a §7 *manufactured oracle* problem, not a
+§3 *absent oracle* problem. Every §7 warning transfers intact.
+
+**What a deterministic simulator actually provides.**
+[Antithesis](https://antithesis.com/docs/resources/deterministic_simulation_testing/)
+— built by the FoundationDB people — is a bespoke **deterministic hypervisor**
+running whole sets of Docker containers with every source of nondeterminism
+controlled: scheduling, network, clocks, disk, randomness. Same seed, same
+execution. It injects faults, snapshots on interesting behavior and branches the
+exploration, and runs faster than wall clock.
+
+An excellent oracle — and a **correctness** oracle. That distinction is the whole
+thing. It answers *does this running system violate its stated properties under
+adversarial scheduling and faults?* It does not answer *was this architecture the
+right choice?*
+
+**Score what system design actually needs:**
+
+| | Measurable? |
+|---|---|
+| Correctness under faults | ✅ genuinely |
+| Latency / throughput under load | ⚠️ needs a load model — approximate |
+| Cost | ✅ once cloud pricing is fixed |
+| Operability — debuggable at 3am? | ❌ |
+| Evolvability — still right in two years? | ❌ and only observable years later |
+| Team fit — do the eight engineers know Kafka? | ❌ not a property of the system |
+
+Two of six, and the four unmeasurable ones are where most real architecture
+arguments live. This is §10's split again: system design is a **construction**
+problem whose objective sits in someone's head — *10M users, eight engineers,
+$50k/month, might pivot*. DST supplies feasibility, not quality. Legality, not
+intent.
+
+**The rollout-cost inversion, which is the practical killer.** Antithesis takes
+*running containers*. One RL rollout therefore equals: implement a complete
+distributed system, containerize it, run it. Even with faster-than-wall-clock
+evaluation, **construction dominates evaluation** — the opposite of robot sim,
+where rollouts are nearly free. RL wants millions of cheap rollouts and this
+offers expensive ones. The only thing that unlocks it is agents making
+implementation cheap, which is the real dependency to watch.
+
+**The fidelity trap, same shape as contact.** §7 asks which side of the contact
+line your oracle sits on. The distributed-systems analogue is **metastable
+failure** — where retries, queues, timeouts, and load shedding become
+*amplifiers*, and the system stays down after the trigger is gone, churning
+backlog. It is transient and emergent, living in the rare-event sequence rather
+than the average, and it arises from feedback loops across exactly the components
+a simplified model abstracts away.
+
+> **Contact is to robotics what metastability is to distributed-systems
+> simulation:** the thing you most need the oracle for is the thing it models
+> worst.
+
+**The version that works: point the agent at the properties, not the
+architecture.** That is Eureka's move (§7) transplanted — Eureka learns *reward
+functions* while the physics engine stays exact; here an agent writes *invariants
+and fault scenarios* while the hypervisor stays exact.
+
+It also attacks a bottleneck this document already named twice. §3, on RTL:
+*"writing a property set complete enough to pin down 'correct' is roughly as hard
+as writing the design."* The sentence applies verbatim to distributed systems —
+DST's binding constraint is that somebody must author good properties, and almost
+nobody does. An agent writing properties sits **upstream of the check** (§13): a
+wrong property costs compute, not correctness.
+
+Ranked by tractability:
+
+1. **Agent writes invariants and fault scenarios for DST** — clean oracle, cheap
+   errors, attacks the real bottleneck
+2. **Capacity and config tuning on a fixed architecture** — instance sizes, pool
+   sizes, shard counts; real scalar (cost at target latency); this is autotuning,
+   which works
+3. **Failure-mode search** — given a system, find the fault sequence that breaks
+   it; clean predicate, and DST already does a non-learned version
+4. **Architecture selection by RL** — blocked on rollout cost and on four of six
+   objectives being unmeasurable
+
+The reason to build on a deterministic simulator is sharper than "it is a
+simulator": **perfect replay makes a found bug a permanent, reusable training
+signal** rather than a flaky observation. That property is rare, and it is what
+makes the substrate worth having.
+
 ---
 
 ## 15. Open questions
