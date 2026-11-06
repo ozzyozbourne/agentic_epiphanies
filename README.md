@@ -2,6 +2,10 @@
 
 feel the rsi
 
+## [code-mode-epiphanies/](code-mode-epiphanies/)
+
+[Code mode and agent harnesses](code-mode-epiphanies/code-mode-and-agent-harnesses.md) — how programmable orchestration complements atomic tools, concurrency and cancellation caveats, and applications to data-intensive agents.
+
 ## [oracle-thesis/](oracle-thesis/)
 
 Why tractability tracks the verifier rather than the model — worked through
