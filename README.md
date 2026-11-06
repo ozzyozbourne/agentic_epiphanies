@@ -4,7 +4,8 @@ feel the rsi
 
 ## [code-mode-epiphanies/](code-mode-epiphanies/)
 
-[Code mode and agent harnesses](code-mode-epiphanies/code-mode-and-agent-harnesses.md) — how programmable orchestration complements atomic tools, concurrency and cancellation caveats, and applications to data-intensive agents.
+- [Code mode and agent harnesses](code-mode-epiphanies/code-mode-and-agent-harnesses.md) — how programmable orchestration complements atomic tools, concurrency and cancellation caveats, and applications to data-intensive agents.
+- [Radius MCP tools and web search](code-mode-epiphanies/radius-mcp-tools-and-web-search.md) — the discovered tool catalog, search versus fetch, and search policy notes.
 
 ## [oracle-thesis/](oracle-thesis/)
 
